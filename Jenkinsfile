@@ -28,26 +28,23 @@ stage('Setup Virtual Environment') {
     }
 }
    
-        stage('Test') {
+         stage('SonarQube Analysis') {
             steps {
-                sh '''
-                bash -c "
-                source venv/bin/activate
-                pytest --cov=app --cov-report=xml
-				pytest --cov=app --cov-report=term-missing --disable-warnings
-                "
-                '''
-            }
-        }
-        
-         stage('Sonar') {
-            steps {
-                withSonarQubeEnv('sonar-server') {
+                withSonarQubeEnv('sonarqube') {
                           sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectKey=Python-project \
                           -Dsonar.projectName=Python-project \
                           -Dsonar.exclusions=venv/** \
                           -Dsonar.sources=. \
                           -Dsonar.python.coverage.reportPaths=coverage.xml'''
+                }
+            }
+        }
+        
+        stage('Quality Gateway Check') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: false,
+                    credentialsId: 'sonar-token'
                 }
             }
         }
